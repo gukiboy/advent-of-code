@@ -2001,6 +2001,7 @@
 
 (def smol-input [1 2 3 4 5 6 1 3 5 6])
 
+;; first (actual) solution
 (defn depth-measurement-increased [input]
 (loop [window [0 1]
        increased-count 0]
@@ -2010,6 +2011,9 @@
                                                                  (nth input (first window)))
                                                             (inc increased-count)
                                                             increased-count)))))
-
 (depth-measurement-increased input)
+
+;; saw other people doing and wanted to try (actually saw @FelipeCortez solution)
+
+(->> input (partition 2 1) (map #(if (> (second %) (first %)) 1 0)) (reduce +))
 
