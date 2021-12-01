@@ -2017,3 +2017,20 @@
 
 (->> input (partition 2 1) (map #(if (> (second %) (first %)) 1 0)) (reduce +))
 
+; second part of puzzle (using my actual solution)
+(defn depth-measurement-increased [input]
+(loop [window [0 1 2 3]
+       increased-count 0]
+  (if (> (nth window 3) (- (count input) 1))
+    increased-count
+    (recur (mapv inc window) (if (< (reduce + (map #(nth input %) (take 3 window)))
+                                    (reduce + (map #(nth input %) (take-last 3 window))))
+                               (inc increased-count)
+                               increased-count)))))
+
+(depth-measurement-increased input)
+
+(depth-measurement-increased (->> input
+    (partition 3 1)
+    (map #(reduce + %))))
+
