@@ -2029,11 +2029,6 @@
                                increased-count)))))
 
 (depth-measurement-increased input)
-(->> input
-    (partition 3 1)
-    (map #(reduce + %))
-    (partition 2 1)
-    (map #(if (> (second %) (first %)) 1 0))
-    (reduce +))
+(->> input (partition 3 1) (map #(reduce + %)) (partition 2 1) (map #(if (> (second %) (first %)) 1 0)) (reduce +))
 
 
