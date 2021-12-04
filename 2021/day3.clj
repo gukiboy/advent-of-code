@@ -37,21 +37,28 @@
 (defn f-frequent-bin [f input]
   (loop [i 0
          filtered-in input]
+    (clojure.pprint/pprint filtered-in)
     (if (= 1 (count filtered-in))
       (first filtered-in)
-      (let [bin-count (->> filtered-in
-                           (apply mapv vector)
-                           (map #(reduce count-bin {0 0 1 0} %)))
-            new-filtered-in (filter #(= (nth % i) (key (apply f val (nth bin-count i))))
-                                    filtered-in)]
-        (recur (inc i)
-               new-filtered-in)))))
+      (if (= 2 (count filtered-in))
+        (let [selected-bin (cond (= f max-key) (filter #(= (nth % i) 1) filtered-in)
+                                 (= f min-key) (filter #(= (nth % i) 0) filtered-in))]
+          selected-bin)
+        (let [bin-count (->> filtered-in
+                             (apply mapv vector)
+                             (map #(reduce count-bin {0 0 1 0} %)))
+              new-filtered-in (filter #(= (nth % i) (key (apply f val (nth bin-count i))))
+                                      filtered-in)]
+          (recur (inc i)
+                 new-filtered-in))))))
 
 (defn bin-array-to-dec [b]
   (let [dec-val (->> b
                      (apply str)
                      (#(Integer/parseInt % 2)))]
     dec-val))
+
+(key (apply max-key val {:chave 1 :chave2 2}))
 
 (comment 
 
