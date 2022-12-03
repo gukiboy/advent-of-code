@@ -18,9 +18,6 @@
       (- digit-val 96)
       (- digit-val 38))))
 
-
-(elves-shared-item example)
-
 ;; first solution
 (->> (s/split input #"\n")
      (map (comp item-value shared-item))
