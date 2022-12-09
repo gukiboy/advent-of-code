@@ -12,32 +12,54 @@
        (filter is-num?)
        (map #(Integer/parseInt %))))
 
-(defn move-from-to
-  "In cargos, moves amount $moves from stack $from to $to"
-  [cargos move from to]
-  (let [actual-from (- from 1)
-        actual-to (- from 1)
-        ]
-    (if (= 0 move)
-      cargos
-      (recur (pop )))
-    ))
-
-(pop ([["1" "2" "3"]] 0))
-
-(peek [1 2 3])
-
-(conj )
-
 (defn apop [stacks i]
   (assoc stacks i (pop (stacks i))))
 
+(defn apeek [stacks i]
+  (peek (stacks i)))
+
+(defn aconj [stacks i item]
+  (assoc stacks i (conj (stacks i) item)))
+
+(defn move-from-to
+  "In cargos, moves amount $moves from stack $from to $to. CrateMover 9000"
+  [cargos move from to]
+  (if (= 0 move)
+    cargos
+    (let [actual-from (- from 1)
+          actual-to (- to 1)
+          moved-item (apeek cargos actual-from)
+          new-cargos (-> cargos (apop actual-from) (aconj actual-to moved-item))]
+      (recur new-cargos (- move 1) from to))))
 
 
-(let [stacks [[1 2 3]
-              [4 5]]]
-  (apop stacks 0))
+(defn asubvec
+  [stacks i amount]
+  (let [stack-i (stacks i)
+        size (count stack-i)]
+    (subvec stack-i (- size amount) size)))
 
+(defn asubvec-remain
+  [stacks i amount]
+    (let [stack-i (stacks i)]
+      (assoc stacks i (subvec stack-i 0 (- (count stack-i) amount)))))
+
+(defn ajoin
+  [stacks i moved-ar]
+  (assoc stacks i (into [] (concat (stacks i) moved-ar))))
+
+(defn move-from-to-2
+  "In cargos, moves amount $moves from stack $from to $to. CrateMover 9001. "
+  [cargos move from to]
+  (let [actual-from (- from 1)
+        actual-to (- to 1)
+        moved-item (asubvec cargos actual-from move)
+        new-cargos (asubvec-remain cargos actual-from move)]
+    (ajoin new-cargos actual-to moved-item)))
+
+
+
+;; Just change from move-from-to-2 to move-from-to for each solution
 
 (let [stacks [["W" "M" "L" "F"]
               ["B" "Z" "V" "M" "F"]
@@ -49,20 +71,8 @@
               ["V" "H" "P" "S" "Z" "W" "R" "B"]
               ["B" "M" "J" "C" "G" "H" "Z" "W"]]]
   (->> (st/split input #"\n")
-       (take 10)
        (map str-to-input)
- #_      (reduce #(apply (partial move-from-to %1) %2) stacks)))
+       (reduce #(apply move-from-to-2 %1 %2) stacks)
+       (map last)
+       concat))
 
-(let [stacks [["W" "M" "L" "F"]
-              ["B" "Z" "V" "M" "F"]
-              ["H" "V" "R" "S" "L" "Q"]
-              ["F" "S" "V" "Q" "P" "M" "T" "J"]
-              ["K" "S" "W"]
-              ["F" "V" "P" "M" "R" "J" "W"]
-              ["J" "Q" "C" "P" "N" "R" "F"]
-              ["V" "H" "P" "S" "Z" "W" "R" "B"]
-              ["B" "M" "J" "C" "G" "H" "Z" "W"]]]
-  (move-from-to stacks 3 5 7))
-
-
-((partial move-from-to 12 10) 1 3)
