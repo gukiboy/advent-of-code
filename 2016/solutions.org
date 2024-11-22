@@ -1,0 +1,178 @@
+#+title: AoC 2016
+#+OPTIONS: toc:nil
+#+OPTIONS: num:nil
+
+* 1
+
+https://adventofcode.com/2016/day/1
+
+
+
+** Clojure attempt
+
+I'm imagining the grid as follows:
+
+#+begin_example
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 X 0 0 0 0 
+0 0 X 0 0 0 0 0 0 0 0 | 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 | 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 | 0 0 0 0 
+0 0 0 0 0 X B 0 0 0 X X 0 0 0 0 
+0 0 0 0 0 | 0 0 0 0 | 0 0 0 0 0 
+0 0 0 0 0 | 0 0 0 0 | 0 0 0 0 0 
+0 0 0 0 0 X - - - - X 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+
+
+0  0 8  0
+8  0 8  4
+8  4 4  4
+4  4 4 -4
+#+end_example
+
+
+#+begin_src clojure :exports BOTH
+(defn parse [s]
+  (let [dir (-> s first str keyword)
+        ct  (-> s rest clojure.string/join read-string)]
+    [dir ct]))
+
+(defn process
+  "`pos` [x y]"
+  [{:keys [dir pos pos-history]} [mov dist]]
+  (let [new-dir (case dir
+                  :N (cond (= :L mov) :W (= :R mov) :E)
+                  :S (cond (= :L mov) :E (= :R mov) :W)
+                  :E (cond (= :L mov) :N (= :R mov) :S)
+                  :W (cond (= :L mov) :S (= :R mov) :N))
+        [x y] pos
+        new-pos [(case new-dir :W (- x dist) :E (+ x dist) x)
+                 (case new-dir :N (- y dist) :S (+ y dist) y)]]
+    {:dir new-dir
+     :pos new-pos
+     :pos-history (conj pos-history pos)}))
+
+(defn sum-step
+  [[x1 y1] [x2 y2]]
+  [(+ x1  x2) (+ y1 y2)])
+
+(defn step [dir]
+  (fn [d]
+    (case dir
+      :N [0 (- d)]
+      :S [0     d]
+      :E [d     0]
+      :W [(- d) 0])))
+
+(defn first-duplicate [coll]
+  (reduce (fn [acc [idx x]]
+            (if-let [v (get acc x)]
+              (reduced (conj v idx))
+              (assoc acc x [idx])))
+          {} (map-indexed #(vector % %2) coll)))
+
+
+(defn process-2
+  "`pos` [x y]"
+  [{:keys [dir pos pos-history step-history]} [mov dist]]
+  (let [new-dir (case dir
+                  :N (cond (= :L mov) :W (= :R mov) :E)
+                  :S (cond (= :L mov) :E (= :R mov) :W)
+                  :E (cond (= :L mov) :N (= :R mov) :S)
+                  :W (cond (= :L mov) :S (= :R mov) :N))
+        [x y] pos
+        step-hist (map (partial sum-step pos) (map (comp (step new-dir) inc) (range dist)))]
+    (when (= [0 4] (last step-hist)))
+    {:dir new-dir
+     :pos (last step-hist)
+     :pos-history (conj pos-history pos)
+     :step-history (concat step-history step-hist)}))
+
+(let [raw    (slurp "input/1")
+      parsed (->> (clojure.string/split raw #", ")
+                  (map parse))
+      m      (reduce process-2 {:dir :N
+                                :pos [0 0]
+                                :pos-history []} parsed)]
+  (def -step-hist (:step-history m))
+  {:answer-1 (apply + (map abs (:pos m)))
+   :answer-2 (apply + (map abs (nth (:step-history m) (first (first-duplicate (:step-history m))))))})
+#+end_src
+
+#+RESULTS:
+| #'user/parse                   |
+| #'user/process                 |
+| #'user/sum-step                |
+| #'user/step                    |
+| #'user/first-duplicate         |
+| #'user/process-2               |
+| {:answer-1 299, :answer-2 181} |
+
+** J attempt
+#+begin_src j :exports BOTH
+load 'tables/dsv'
+i1=. ',' readdsv 'input/1'
+     i1
+#+end_src
+
+#+RESULTS:
+: ┌──┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬─────┬───┬───┬───┬───┬───┬───┬───┬───┬────┬───┬───┬───┬───┬───┬─...
+: │L1│ L3│ L5│ L3│ R1│ L4│ L5│ R1│ R3│ L5│ R1│ L3│ L2│ L3│ R2│ R2│ L3│ L3│ R1│ L2│ R1│ L3│ L2│ R4│ R2│ L5│ R4│ L5│ R4│ L2│ R3│ L2│ R4│ R1│ L5│ L4│ R1│ L2│ R3│ R1│ R2│ L4│ R1│ L2│ R3│ L2│ L3│ R5│ L192│ R4│ L5│ R4│ L1│ R4│ L4│ R2│ L5│ R45│ L2│ L5│ R4│ R5│ L3│ ...
+: └──┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴─────┴───┴───┴───┴───┴───┴───┴───┴───┴────┴───┴───┴───┴───┴───┴─...
+
+*** Solution from other person
+
+#+begin_src j :exports BOTH
+NB. Create a boxed list containing each instruction in one box
+inst =. <;._2 ',' ,~ (' ',CRLF) -.~ wd 'clippaste'
+NB. Encode the direction of movement as (amount of north,amount of east)
+NB. R changes sign of north component and then switches components
+NB. L changes sign of east component and then switches components
+NB. Create direction (in boxed list) for each move.  Start by appending north (remove at the end)
+dir =. ([: |. ] * 1 _1 |.~ 'L' = {.@[)&.:>/\.&.(,&(<1 0))&.|. inst
+NB. Multiply each move by its direction.  Add em up, then add component magnitudes
+]totmove =. +/ | +/ dir (* ".@}.)&> inst
+#+end_src
+
+#+RESULTS:
+: ] (+/ (| +/ dir (* ".@}.)&> inst))
+
+* 2
+https://adventofcode.com/2016/day/2
+** J attempt
+
+The input has 5 lines, and we have to press 5 buttons given that; so I
+need to first split the string properly. This can be done using
+
+#+begin_src j
+LF split string
+#+end_src
+
+as *LF* is the line finishing character.
+
+For each line, we have to move our finger in the keypad that is
+described with
+
+#+begin_src j
+3 3 $ 1 + i. 9
+#+end_src
+
+And not do invalid moves.
+
+*** J solution
+#+begin_src j :exports BOTH
+testi=.'x' splitstring 'LLRUDxLRRDUxLLRDU'
+
+i=. fread './input/2'
+kb=. 3 3 $ 1 + i. 9 NB. keypad
+#+end_src
+
+#+RESULTS:
+: ┌─────┬─────┬─────┐
+: │LLRUD│LRRDU│LLRDU│
+: └─────┴─────┴─────┘
