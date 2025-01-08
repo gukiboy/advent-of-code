@@ -6,8 +6,6 @@
 
 https://adventofcode.com/2016/day/1
 
-
-
 ** Clojure attempt
 
 I'm imagining the grid as follows:
@@ -64,10 +62,8 @@ I'm imagining the grid as follows:
 (defn step [dir]
   (fn [d]
     (case dir
-      :N [0 (- d)]
-      :S [0     d]
-      :E [d     0]
-      :W [(- d) 0])))
+      :N [0 (- d)] :S [0     d]
+      :E [d     0] :W [(- d) 0])))
 
 (defn first-duplicate [coll]
   (reduce (fn [acc [idx x]]
@@ -75,7 +71,6 @@ I'm imagining the grid as follows:
               (reduced (conj v idx))
               (assoc acc x [idx])))
           {} (map-indexed #(vector % %2) coll)))
-
 
 (defn process-2
   "`pos` [x y]"
@@ -87,7 +82,6 @@ I'm imagining the grid as follows:
                   :W (cond (= :L mov) :S (= :R mov) :N))
         [x y] pos
         step-hist (map (partial sum-step pos) (map (comp (step new-dir) inc) (range dist)))]
-    (when (= [0 4] (last step-hist)))
     {:dir new-dir
      :pos (last step-hist)
      :pos-history (conj pos-history pos)
@@ -102,6 +96,12 @@ I'm imagining the grid as follows:
   (def -step-hist (:step-history m))
   {:answer-1 (apply + (map abs (:pos m)))
    :answer-2 (apply + (map abs (nth (:step-history m) (first (first-duplicate (:step-history m))))))})
+
+
+(map parse (-> (slurp "input/1")
+               (clojure.string/split #", ")))
+
+(read-string (clojure.string/join (rest "L11")))
 #+end_src
 
 #+RESULTS:
@@ -143,6 +143,10 @@ NB. Multiply each move by its direction.  Add em up, then add component magnitud
 : ] (+/ (| +/ dir (* ".@}.)&> inst))
 
 * 2
+#+SETUPFILE: https://gitlab.com/OlMon/org-themes/-/raw/master/src/comfy_inline/comfy_inline.theme?ref_type=heads
+#+OPTIONS: num:nil
+#+OPTIONS: toc:nil
+
 https://adventofcode.com/2016/day/2
 ** J attempt
 
@@ -162,13 +166,180 @@ described with
 3 3 $ 1 + i. 9
 #+end_src
 
+#+RESULTS:
+: 1 2 3
+: 4 5 6
+: 7 8 9
+
 And not do invalid moves.
 
+On AoC 2015 day 3, we have a similar problem, and the solution
+involves the following "mapping":
+
+#+begin_src j :exports BOTH
+parse=: 0,".@rplc&('^>v<';"0 <;._1'/1 0/0 1/_1 0/0 _1')"0
+#~.+/\parse '^v^v^v^v^v'	
+#+end_src
+
+#+RESULTS:
+: 2
+
+I can do the same here, by changing the directions with the names;
+however, I still don't know exactly what goes on. I'll trust this for
+the moment. We also have to adjust U and D movements, because they'll
+be compared to a regular array, oriented from left, uppermost, to
+right, down.:
+
+#+begin_src j :exports both
+'URDL';"0 <;._1'/_1 0/0 1/1 0/0 _1' NB. This part specifically is what I don't get. "0 <;._1
+#+end_src
+
+#+RESULTS:
+: ┌─┬────┐
+: │U│_1 0│
+: ├─┼────┤
+: │R│0 1 │
+: ├─┼────┤
+: │D│1 0 │
+: ├─┼────┤
+: │L│0 _1│
+: └─┴────┘
+
+With this, we can do a bit of a summing directions, which is part of
+the solution, but differently from what happens on AoC 2015 day 3, we
+have a minimum and maximum for each of the items, those being 0 and 3.
+
+#+begin_src j :exports both
+parse=. 0,".@rplc&('URDL';"0 <;._1'/_1 0/0 1/1 0/0 _1')"0
+parse 'UDLR'
+#+end_src
+
+#+RESULTS:
+:  0  0
+: _1  0
+:  1  0
+:  0 _1
+:  0  1
+
+So, if we sum this, we are able to "select a button". But we need to
+max out both of the axes.
+
+#+begin_src j :exports both
+parse=. 0,".@rplc&('URDL';"0 <;._1'/_1 0/0 1/1 0/0 _1')"0
+1 1
+
++/parse 'DDDD' NB. _4 0
+#+end_src
+
+#+RESULTS:
+: 1 1
+: 
+: 4 0
+
+Now, how do we max out a result? Let's see:
+
+#+begin_src j :exports both
+3&<. @: (0&>.) 4
+3&<. @: (0&>.) -1
+     3&<. @: (0&>.) _1 _1
+     3&<. @: (0&>.) 4 4
+#+end_src
+
+#+RESULTS:
+: 3
+: 
+: 0
+: 
+: 0 0
+: 
+: 3 3
+
+So, here, *&* is like a =partial= in Clojure, but, in J terms, I'm
+creating a new monad from a dyad with a fixed noun, specifically, I'm
+creating the monad "smaller or equal to 3". After that, We have *@:*,
+which composes monads, and we will compose this with the monad *0&>.*;
+which would be "greater than 0". When composing those, I get exactly
+what I wanted: a way to max out 3 or min out as 0.
+
+Awesome! We have a monadic that limits our movements, and a list of
+them We can compose the sum (which is a dyadic) with it and then use
+the */* insert to sum out our list properly.
+
+#+begin_src j :exports both
+2 2  (3&<. @: (0&>.)) @: +  _3 _3
+2 2  (3&<. @: (0&>.)) @: +  2 2
+3 0  (3&<. @: (0&>.)) @: +  _1 0
+
+#+end_src
+
+#+RESULTS:
+: 0 0
+: 
+: 3 3
+: 
+: 2 0
+: 
+: 1 1 3 3 3 3 0 0
+
+With *@:*, we compose our monad with the *+* dyad, now, we will sum
+things but limiting the results of the sum to 3 or 0. Let's do it all
+at once:
+
+#+begin_src j :exports both
+parse=. 1 1,".@rplc&('URDL';"0 <;._1'/_1 0/0 1/1 0/0 _1')"0
+2&<.@:(0&>.)@:+/ (parse 'DDUU')
+
+		  (parse 'DDUU')
+
++/(parse 'DDUU')
+
+#+end_src
+
+#+RESULTS:
+: 2 1
+: 
+:  1 1
+:  1 0
+:  1 0
+: _1 0
+: _1 0
+: 
+: 1 1
+
+ testing out
+#+begin_src j
+NB. 2&<. @: (0&>.) 1 2 3 4 3 2 1 _1
+>'1 0';'0 1';'_1 0';'0 _1'
+<;._1'/1 0/0 1/_1 0/0 _1' 
+#+end_src
+
+#+RESULTS:
+: 1 0 
+: 0 1 
+: _1 0
+: 0 _1
+: 
+: ┌───┬───┬────┬────┐
+: │1 0│0 1│_1 0│0 _1│
+: └───┴───┴────┴────┘
+
+
+
+This way, we're able to know where each line ended!
+
+However, right now there's an issue. As you can see, although the
+parsing yelds something correct, we get a wrong result when using our
+new composed verb. The usage of *+/* gets it right.
+
 *** J solution
+
+
 #+begin_src j :exports BOTH
 testi=.'x' splitstring 'LLRUDxLRRDUxLLRDU'
 
 i=. fread './input/2'
+parse=. 1 1,".@rplc&('URDL';"0 <;._1'/_1 0/0 1/1 0/0 _1')"0 NB. Parse input
+(2&<.@:(0&>.))@:+/ parse 'URLLD' NB. parse and sum input
 kb=. 3 3 $ 1 + i. 9 NB. keypad
 #+end_src
 
